@@ -2,15 +2,15 @@ import base64
 from openai import OpenAI
 
 
-def beautify_image(api_key, image_path, prompt=None):
-    """Enhance a portrait photo naturally, optionally guided by a custom prompt."""
+def beautify_image(api_key, image_path):
+    """Enhance a portrait photo naturally — no prompt from user."""
     client = OpenAI(api_key=api_key)
+
     base_prompt = (
-        "Enhance the portrait naturally: improve lighting, skin tone, and clarity "
-        "while keeping it realistic and detailed."
+        "Enhance this portrait photo naturally: improve lighting, smooth skin slightly, "
+        "sharpen details, and keep the face and background realistic. "
+        "Do not alter facial features or change the person's identity."
     )
-    if prompt:
-        base_prompt += f" {prompt}"
 
     with open(image_path, "rb") as img:
         result = client.images.edit(
