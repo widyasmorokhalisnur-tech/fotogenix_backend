@@ -22,21 +22,21 @@ def home():
     return jsonify({"message": "✅ AI Photo Editor Backend is running!"})
 
 
+# ✅ Beautify: always natural, no user prompt
 @app.route("/api/beautify", methods=["POST"])
 def api_beautify():
-    """Enhance a portrait image naturally."""
+    """Enhance a portrait image naturally (no prompt allowed)."""
     if "image" not in request.files:
         return jsonify({"error": "No image uploaded"}), 400
 
-    prompt = request.form.get("prompt", "").strip()
     img = request.files["image"]
     img_path = os.path.join("output", img.filename)
     img.save(img_path)
 
-    b64 = beautify_image(OPENAI_API_KEY, img_path, prompt)
+    # Always use the default base beautify prompt from utils.py
+    b64 = beautify_image(OPENAI_API_KEY, img_path)
     output_path = save_base64_image(b64, "beautified.png")
 
-    # Return full image URL for Flutter
     return jsonify({"image_url": f"{request.host_url}{output_path}"})
 
 
