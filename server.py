@@ -4,7 +4,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from utils import beautify_image, change_background, change_style, save_base64_image
 
-# Load environment variables
+# 🔧 Load environment variables
 load_dotenv()
 
 app = Flask(__name__, static_folder="output")
@@ -13,75 +13,70 @@ CORS(app)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PORT = int(os.getenv("PORT", 8080))
 
-# Pastikan folder output tersedia
+# Ensure the output folder exists
 os.makedirs("output", exist_ok=True)
+
 
 @app.route("/")
 def home():
-    return jsonify({"message": "AI Photo Editor Backend is running ✅"})
+    return jsonify({"message": "✅ AI Photo Editor Backend is running!"})
 
-# ============================
-# BEAUTIFY
-# ============================
+
 @app.route("/api/beautify", methods=["POST"])
 def api_beautify():
+    """Enhance a portrait image naturally."""
     if "image" not in request.files:
         return jsonify({"error": "No image uploaded"}), 400
 
+    prompt = request.form.get("prompt", "").strip()
     img = request.files["image"]
     img_path = os.path.join("output", img.filename)
     img.save(img_path)
 
-    b64 = beautify_image(OPENAI_API_KEY, img_path)
-    output = save_base64_image(b64, "beautified.png")
+    b64 = beautify_image(OPENAI_API_KEY, img_path, prompt)
+    output_path = save_base64_image(b64, "beautified.png")
 
-    image_url = request.host_url + f"output/{output}"
-    return jsonify({"image_url": image_url})
+    # Return full image URL for Flutter
+    return jsonify({"image_url": f"{request.host_url}{output_path}"})
 
 
-# ============================
-# BACKGROUND
-# ============================
 @app.route("/api/background", methods=["POST"])
 def api_background():
+    """Change the photo background based on a prompt."""
     if "image" not in request.files:
         return jsonify({"error": "No image uploaded"}), 400
 
+    prompt = request.form.get("prompt", "simple studio background").strip()
     img = request.files["image"]
     img_path = os.path.join("output", img.filename)
     img.save(img_path)
 
-    b64 = change_background(OPENAI_API_KEY, img_path)
-    output = save_base64_image(b64, "background_changed.png")
+    b64 = change_background(OPENAI_API_KEY, img_path, prompt)
+    output_path = save_base64_image(b64, "background_changed.png")
 
-    image_url = request.host_url + f"output/{output}"
-    return jsonify({"image_url": image_url})
+    return jsonify({"image_url": f"{request.host_url}{output_path}"})
 
 
-# ============================
-# STYLE
-# ============================
 @app.route("/api/style", methods=["POST"])
 def api_style():
+    """Apply a visual style to the photo."""
     if "image" not in request.files:
         return jsonify({"error": "No image uploaded"}), 400
 
+    prompt = request.form.get("prompt", "cartoon").strip()
     img = request.files["image"]
     img_path = os.path.join("output", img.filename)
     img.save(img_path)
 
-    b64 = change_style(OPENAI_API_KEY, img_path)
-    output = save_base64_image(b64, "style_changed.png")
+    b64 = change_style(OPENAI_API_KEY, img_path, prompt)
+    output_path = save_base64_image(b64, "styled.png")
 
-    image_url = request.host_url + f"output/{output}"
-    return jsonify({"image_url": image_url})
+    return jsonify({"image_url": f"{request.host_url}{output_path}"})
 
 
-# ============================
-# Serve output folder
-# ============================
 @app.route("/output/<path:filename>")
 def serve_output(filename):
+    """Serve generated image files."""
     return send_from_directory("output", filename)
 
 
