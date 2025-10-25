@@ -4,6 +4,7 @@ from PIL import Image
 
 def beautify_image(api_key, image_path):
     client = OpenAI(api_key=api_key)
+
     with open(image_path, "rb") as img:
         result = client.images.edit(
             model="gpt-image-1",
@@ -15,11 +16,13 @@ def beautify_image(api_key, image_path):
 
 def change_background(api_key, image_path, prompt):
     client = OpenAI(api_key=api_key)
+
     with open(image_path, "rb") as img:
         result = client.images.edit(
             model="gpt-image-1",
             image=img,
-            prompt=f"Remove background then replace it with {prompt}."
+            prompt=f"Keep the person exactly the same. Replace ONLY the background with: {prompt}. "
+                   "Maintain realism in subject details and do not modify the face or pose."
         )
     return result.data[0].b64_json
 
