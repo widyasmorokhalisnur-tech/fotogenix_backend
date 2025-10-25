@@ -71,5 +71,6 @@ def serve_output(filename):
 
 
 if __name__ == "__main__":
-    print("✅ Use Gunicorn to run this app in production")
+    app.run()
+
 
