@@ -2,7 +2,6 @@ import base64
 from openai import OpenAI
 from rembg import remove
 from PIL import Image
-import io
 
 def beautify_image(api_key, image_path):
     """Enhance a portrait photo naturally — no prompt from user."""
@@ -25,35 +24,33 @@ def beautify_image(api_key, image_path):
 
 def change_background(api_key, image_path, prompt):
     """
-    Replace the background using OpenAI Image Edit API with automatic mask.
-    The subject is preserved using rembg.
+    Replace the background using OpenAI Image Edit API with proper mask.
+    Only background is replaced; main subject is preserved.
     """
-    # 🔹 Step 1: Create transparent foreground
+    # Step 1: Remove background (transparent PNG)
     with open(image_path, "rb") as f:
         input_bytes = f.read()
-    foreground = remove(input_bytes)  # PNG with alpha
+    foreground = remove(input_bytes)
 
-    # Save temporary images
     fg_path = "output/foreground.png"
     mask_path = "output/mask.png"
     with open(fg_path, "wb") as f:
         f.write(foreground)
 
-    # Mask: alpha channel = subject
+    # Step 2: Create mask from alpha channel
     img = Image.open(fg_path).convert("RGBA")
-    alpha = img.split()[3]
-    mask = Image.new("L", img.size, color=255)  # white mask = editable
-    mask.paste(alpha)
+    alpha = img.split()[3]  # alpha channel
+    mask = Image.eval(alpha, lambda a: 255 - a)  # invert: background=white/editable, subject=black/preserved
     mask.save(mask_path)
 
-    # 🔹 Step 2: OpenAI Image Edit with mask
+    # Step 3: OpenAI Image Edit with mask
     client = OpenAI(api_key=api_key)
     with open(fg_path, "rb") as img_file, open(mask_path, "rb") as mask_file:
         result = client.images.edit(
             model="gpt-image-1",
             image=img_file,
             mask=mask_file,
-            prompt=f"Replace the background with {prompt}. Keep the main subject realistic."
+            prompt=f"Replace the background with {prompt}. Keep the main subject realistic and unchanged."
         )
     return result.data[0].b64_json
 
