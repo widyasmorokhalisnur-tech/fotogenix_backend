@@ -10,7 +10,7 @@ def beautify_image(api_key, image_path):
     client = OpenAI(api_key=api_key)
 
     with open(image_path, "rb") as img:
-        result = client.images.edits(
+        result = client.images.edit(
             model="gpt-image-1",
             image=img,
             prompt="Enhance this portrait photo naturally while keeping identity realistic. "
@@ -29,7 +29,7 @@ def change_background(api_key, image_path, prompt, mask_path=None):
     if mask_path:
         # With mask — replace only transparent area
         with open(image_path, "rb") as img, open(mask_path, "rb") as mask:
-            result = client.images.edits(
+            result = client.images.edit(
                 model="gpt-image-1",
                 image=img,
                 mask=mask,
@@ -40,7 +40,7 @@ def change_background(api_key, image_path, prompt, mask_path=None):
     else:
         # Without mask — AI auto-detects subject
         with open(image_path, "rb") as img:
-            result = client.images.edits(
+            result = client.images.edit(
                 model="gpt-image-1",
                 image=img,
                 prompt=f"Keep the person exactly the same. Replace ONLY the background with: {prompt}. "
@@ -58,7 +58,7 @@ def change_style(api_key, image_path, style_prompt):
     client = OpenAI(api_key=api_key)
 
     with open(image_path, "rb") as img:
-        result = client.images.edits(
+        result = client.images.edit(
             model="gpt-image-1",
             image=img,
             prompt=f"Apply {style_prompt} artistic style while keeping the subject realistic "
