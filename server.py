@@ -71,6 +71,7 @@ def serve_output(filename):
 
 
 if __name__ == "__main__":
-    app.run()
+    print("✅ Run using Gunicorn, not Flask dev server.")
+
 
 
