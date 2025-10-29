@@ -65,7 +65,7 @@ def change_background_techhk(api_key, image_path, prompt=None, scene_type="105")
 
         # 2️⃣ Cek hasil (polling)
         url_result = f"https://techhk.aoscdn.com/api/tasks/visual/background/{task_id}"
-        for _ in range(20):  # ±40 detik
+        for _ in range(60):  # ±40 detik
             res = requests.get(url_result, headers=headers)
             if res.status_code == 200:
                 data = res.json().get("data", {})
