@@ -1,14 +1,13 @@
 import os
+import time
 import base64
 import requests
-import time
+
 
 # ===================================
-# SAVE / DOWNLOAD IMAGE
+# SAVE BASE64 IMAGE
 # ===================================
-
 def save_base64_image(b64_data, filename):
-    """Simpan hasil gambar base64 ke folder output"""
     os.makedirs("output", exist_ok=True)
     image_bytes = base64.b64decode(b64_data)
     output_path = f"output/{filename}"
@@ -17,37 +16,16 @@ def save_base64_image(b64_data, filename):
     return output_path
 
 
-def download_and_save_image(url, filename):
-    """Download gambar dari URL dan simpan ke folder output"""
-    os.makedirs("output", exist_ok=True)
-    response = requests.get(url)
-    if response.status_code == 200:
-        output_path = f"output/{filename}"
-        with open(output_path, "wb") as f:
-            f.write(response.content)
-        return output_path
-    else:
-        raise Exception(f"Failed to download image: {response.status_code} - {response.text}")
-
-
 # ===================================
-# BEAUTIFY (PicWish)
+# 1️⃣ BEAUTIFY FACE (PicWish)
 # ===================================
-
-def beautify_face_picwish(api_key, image_path, scale_factor=1):
-    """
-    AI Beautify / Face Enhancement
-    Membuat wajah lebih halus, bersih, dan jelas.
-    """
-    url = "https://techhk.aoscdn.com/api/tasks/visual/scale"
+def beautify_face_picwish(api_key, image_path):
+    """AI Beautify / Face Enhancement"""
+    url = "https://techhk.aoscdn.com/api/tasks/visual/face_beautify"
     headers = {"X-API-KEY": api_key}
     files = {"image_file": open(image_path, "rb")}
-    data = {
-        "sync": 1,
-        "type": "face",
-        "scale_factor": scale_factor,
-        "return_type": 1
-    }
+    data = {"whitening": 0.3, "smoothing": 0.5}
+
     response = requests.post(url, headers=headers, files=files, data=data)
     data_json = response.json()
 
@@ -58,17 +36,16 @@ def beautify_face_picwish(api_key, image_path, scale_factor=1):
 
 
 # ===================================
-# CHANGE BACKGROUND (TechHK Visual)
+# 2️⃣ CHANGE BACKGROUND (TechHK)
 # ===================================
-
 def change_background_techhk(api_key, image_path, prompt=None, scene_type="105"):
     """
-    AI Background Changer
-    - Bisa ubah background berdasarkan teks (prompt) atau preset scene_type.
-    - scene_type default 105 = latar umum.
+    Ubah background foto.
+    Bisa pakai 'prompt' deskripsi (contoh: 'beach sunset', 'modern studio background')
+    atau scene_type default (105 = studio).
     """
     try:
-        # Buat task baru
+        # 1️⃣ Buat task
         url_create = "https://techhk.aoscdn.com/api/tasks/visual/background"
         headers = {"X-API-KEY": api_key}
         files = {"image_file": open(image_path, "rb")}
@@ -86,9 +63,9 @@ def change_background_techhk(api_key, image_path, prompt=None, scene_type="105")
         resp_json = response.json()
         task_id = resp_json["data"]["task_id"]
 
-        # Cek hasil berkala
+        # 2️⃣ Cek hasil (polling)
         url_result = f"https://techhk.aoscdn.com/api/tasks/visual/background/{task_id}"
-        for _ in range(20):  # max ±40 detik
+        for _ in range(20):  # ±40 detik
             res = requests.get(url_result, headers=headers)
             if res.status_code == 200:
                 data = res.json().get("data", {})
@@ -97,27 +74,23 @@ def change_background_techhk(api_key, image_path, prompt=None, scene_type="105")
             time.sleep(2)
 
         raise Exception("Timeout: Background generation not completed.")
-
     except Exception as e:
         raise Exception(f"ChangeBackground Error: {e}")
 
 
 # ===================================
-# STYLE ENHANCEMENT (PicWish)
+# 3️⃣ VISUAL MAKEOVER (STYLE)
 # ===================================
-
-def enhance_image_picwish(api_key, image_path):
+def visual_makeover_picwish(api_key, image_path, style="comic"):
     """
-    AI Style / Image Enhancement
-    Meningkatkan kualitas gambar (HD, tajam, dan cerah).
+    Ubah gaya foto menjadi comic / vector / realistic / painting / cartoon / anime dll.
     """
-    url = "https://techhk.aoscdn.com/api/tasks/visual/scale"
+    url = "https://techhk.aoscdn.com/api/tasks/visual/transfer"
     headers = {"X-API-KEY": api_key}
     files = {"image_file": open(image_path, "rb")}
     data = {
         "sync": 1,
-        "type": "image",
-        "scale_factor": 2,
+        "style": style,  # contoh: "comic", "vector", "painting", "anime"
         "return_type": 1
     }
 
@@ -125,6 +98,6 @@ def enhance_image_picwish(api_key, image_path):
     data_json = response.json()
 
     if response.status_code != 200 or "data" not in data_json:
-        raise Exception(f"Enhance Error: {data_json}")
+        raise Exception(f"Makeover Error: {data_json}")
 
     return data_json["data"]["image"]
