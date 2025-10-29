@@ -1,6 +1,7 @@
+# utils.py
+import os
 import base64
 import requests
-import os
 
 def save_base64_image(b64_data, filename):
     """
@@ -13,10 +14,9 @@ def save_base64_image(b64_data, filename):
         f.write(image_bytes)
     return output_path
 
-
 def download_and_save_image(url, filename):
     """
-    Download gambar dari URL (biasanya dari PicWish) dan simpan ke folder output.
+    Download gambar dari URL dan simpan ke folder output.
     """
     os.makedirs("output", exist_ok=True)
     response = requests.get(url)
@@ -28,7 +28,6 @@ def download_and_save_image(url, filename):
     else:
         raise Exception(f"Failed to download image: {response.status_code} - {response.text}")
 
-
 def beautify_with_picwish(api_key, image_path):
     """
     Gunakan API PicWish untuk mempercantik foto wajah (beautify).
@@ -36,7 +35,6 @@ def beautify_with_picwish(api_key, image_path):
     url = "https://techhk.aoscdn.com/api/tasks/beautify/portrait"
     headers = {"X-API-KEY": api_key}
     files = {"image_file": open(image_path, "rb")}
-
     response = requests.post(url, headers=headers, files=files)
     data = response.json()
 
@@ -45,7 +43,6 @@ def beautify_with_picwish(api_key, image_path):
 
     return data["data"]["image"]  # URL hasil beautify
 
-
 def remove_background_picwish(api_key, image_path):
     """
     Gunakan API PicWish untuk menghapus/mengganti background.
@@ -53,15 +50,14 @@ def remove_background_picwish(api_key, image_path):
     url = "https://techhk.aoscdn.com/api/tasks/visual/segmentation"
     headers = {"X-API-KEY": api_key}
     files = {"image_file": open(image_path, "rb")}
+    data = {"sync": 1}  # sync=1 supaya hasil langsung dapat
+    response = requests.post(url, headers=headers, files=files, data=data)
+    data_json = response.json()
 
-    response = requests.post(url, headers=headers, files=files)
-    data = response.json()
+    if response.status_code != 200 or "data" not in data_json:
+        raise Exception(f"PicWish Background Error: {data_json}")
 
-    if response.status_code != 200 or "data" not in data:
-        raise Exception(f"PicWish Background Error: {data}")
-
-    return data["data"]["image"]  # URL hasil remove background
-
+    return data_json["data"]["image"]  # URL hasil remove background
 
 def enhance_image_picwish(api_key, image_path):
     """
@@ -70,7 +66,6 @@ def enhance_image_picwish(api_key, image_path):
     url = "https://techhk.aoscdn.com/api/tasks/ai-enhance"
     headers = {"X-API-KEY": api_key}
     files = {"image_file": open(image_path, "rb")}
-
     response = requests.post(url, headers=headers, files=files)
     data = response.json()
 
