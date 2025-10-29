@@ -1,34 +1,30 @@
 import os
+import requests
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
-from utils import beautify_image, change_background, change_style, save_base64_image
+from utils import save_base64_image
 
-# Load environment variables
+# 🔧 Load environment variables
 load_dotenv()
 
 app = Flask(__name__, static_folder="output")
 CORS(app)
 
-# Config
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+PICWISH_API_KEY = os.getenv("PICWISH_API_KEY")
 PORT = int(os.getenv("PORT", 8080))
 
-# Ensure output folder exists
 os.makedirs("output", exist_ok=True)
 
-# -----------------------------------------------------
-# ROOT
-# -----------------------------------------------------
 @app.route("/")
 def home():
-    return jsonify({"message": "✅ AI Photo Editor Backend is running!"})
+    return jsonify({"message": "✅ AI Photo Editor Backend (PicWish) is running!"})
 
-# -----------------------------------------------------
-# BEAUTIFY ENDPOINT
-# -----------------------------------------------------
+
+# 🎨 BEAUTIFY
 @app.route("/api/beautify", methods=["POST"])
 def api_beautify():
+    """Enhance portrait image using PicWish Beautify API."""
     if "image" not in request.files:
         return jsonify({"error": "No image uploaded"}), 400
 
@@ -36,67 +32,100 @@ def api_beautify():
     img_path = os.path.join("output", img.filename)
     img.save(img_path)
 
-    b64 = beautify_image(OPENAI_API_KEY, img_path)
-    output_path = save_base64_image(b64, "beautified.png")
+    # Kirim ke PicWish beautify endpoint
+    url = "https://techhk.aoscdn.com/api/tasks/beautify/portrait"
+    headers = {"X-API-KEY": PICWISH_API_KEY}
+    files = {"image_file": open(img_path, "rb")}
+    response = requests.post(url, headers=headers, files=files)
+
+    if response.status_code != 200:
+        return jsonify({"error": response.text}), 500
+
+    data = response.json()
+    if "data" not in data or "image" not in data["data"]:
+        return jsonify({"error": "Invalid response from PicWish"}), 500
+
+    # Hasil berupa URL gambar jadi kita download & simpan lokal
+    result_url = data["data"]["image"]
+    result = requests.get(result_url)
+    output_path = "output/beautified.png"
+    with open(output_path, "wb") as f:
+        f.write(result.content)
 
     return jsonify({"image_url": f"{request.host_url}{output_path}"})
 
-# -----------------------------------------------------
-# CHANGE BACKGROUND ENDPOINT (now supports mask)
-# -----------------------------------------------------
+
+# 🖼️ BACKGROUND
 @app.route("/api/background", methods=["POST"])
 def api_background():
+    """Ganti background menggunakan PicWish Remove BG API."""
     if "image" not in request.files:
         return jsonify({"error": "No image uploaded"}), 400
 
-    prompt = request.form.get("prompt", "simple studio background").strip()
-
-    # Save uploaded image
     img = request.files["image"]
     img_path = os.path.join("output", img.filename)
     img.save(img_path)
 
-    # Optional mask upload
-    mask_path = None
-    if "mask" in request.files:
-        mask = request.files["mask"]
-        mask_path = os.path.join("output", f"mask_{mask.filename}")
-        mask.save(mask_path)
+    url = "https://techhk.aoscdn.com/api/tasks/visual/segmentation"
+    headers = {"X-API-KEY": PICWISH_API_KEY}
+    files = {"image_file": open(img_path, "rb")}
+    response = requests.post(url, headers=headers, files=files)
 
-    # Process background change
-    b64 = change_background(OPENAI_API_KEY, img_path, prompt, mask_path)
-    output_path = save_base64_image(b64, "background_changed.png")
+    if response.status_code != 200:
+        return jsonify({"error": response.text}), 500
+
+    data = response.json()
+    if "data" not in data or "image" not in data["data"]:
+        return jsonify({"error": "Invalid response from PicWish"}), 500
+
+    # download hasil
+    result_url = data["data"]["image"]
+    result = requests.get(result_url)
+    output_path = "output/background_changed.png"
+    with open(output_path, "wb") as f:
+        f.write(result.content)
 
     return jsonify({"image_url": f"{request.host_url}{output_path}"})
 
-# -----------------------------------------------------
-# STYLE TRANSFORMATION ENDPOINT
-# -----------------------------------------------------
+
+# ✨ STYLE TRANSFER
 @app.route("/api/style", methods=["POST"])
 def api_style():
+    """Terapkan gaya tertentu ke foto (simulasi dengan beautify+enhancement)."""
     if "image" not in request.files:
         return jsonify({"error": "No image uploaded"}), 400
 
     prompt = request.form.get("prompt", "cartoon").strip()
-
     img = request.files["image"]
     img_path = os.path.join("output", img.filename)
     img.save(img_path)
 
-    b64 = change_style(OPENAI_API_KEY, img_path, prompt)
-    output_path = save_base64_image(b64, "styled.png")
+    # Sementara gunakan PicWish "enhance" untuk simulasi style (PicWish belum punya style khusus)
+    url = "https://techhk.aoscdn.com/api/tasks/ai-enhance"
+    headers = {"X-API-KEY": PICWISH_API_KEY}
+    files = {"image_file": open(img_path, "rb")}
+    response = requests.post(url, headers=headers, files=files)
+
+    if response.status_code != 200:
+        return jsonify({"error": response.text}), 500
+
+    data = response.json()
+    if "data" not in data or "image" not in data["data"]:
+        return jsonify({"error": "Invalid response from PicWish"}), 500
+
+    result_url = data["data"]["image"]
+    result = requests.get(result_url)
+    output_path = "output/styled.png"
+    with open(output_path, "wb") as f:
+        f.write(result.content)
 
     return jsonify({"image_url": f"{request.host_url}{output_path}"})
 
-# -----------------------------------------------------
-# STATIC FILE SERVE
-# -----------------------------------------------------
+
 @app.route("/output/<path:filename>")
 def serve_output(filename):
     return send_from_directory("output", filename)
 
-# -----------------------------------------------------
-# ENTRY POINT
-# -----------------------------------------------------
+
 if __name__ == "__main__":
-    print("✅ Run using Gunicorn, not Flask dev server.")
+    app.run(host="0.0.0.0", port=PORT)
