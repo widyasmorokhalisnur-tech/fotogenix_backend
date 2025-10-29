@@ -3,7 +3,12 @@ import os
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
-from utils import beautify_with_picwish, remove_background_picwish, enhance_image_picwish, download_and_save_image
+from utils import (
+    beautify_face_picwish,
+    remove_background_picwish,
+    enhance_image_picwish,
+    download_and_save_image
+)
 
 load_dotenv()
 
@@ -18,7 +23,7 @@ os.makedirs("output", exist_ok=True)
 def home():
     return jsonify({"message": "✅ AI Photo Editor Backend is running!"})
 
-# 🎨 BEAUTIFY
+# 🎨 BEAUTIFY / FACE ENHANCEMENT
 @app.route("/api/beautify", methods=["POST"])
 def api_beautify():
     if "image" not in request.files:
@@ -29,13 +34,13 @@ def api_beautify():
     img.save(img_path)
 
     try:
-        result_url = beautify_with_picwish(PICWISH_API_KEY, img_path)
+        result_url = beautify_face_picwish(PICWISH_API_KEY, img_path)
         output_path = download_and_save_image(result_url, "beautified.png")
         return jsonify({"image_url": f"{request.host_url}{output_path}"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# 🖼️ BACKGROUND
+# 🖼️ BACKGROUND REMOVAL
 @app.route("/api/background", methods=["POST"])
 def api_background():
     if "image" not in request.files:
